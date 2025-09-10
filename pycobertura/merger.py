@@ -51,9 +51,19 @@ class CoberturaMerger:
         """
         for filename in self.filenames[1:]:
             new_tree = ET.parse(filename).getroot()
+            packages_el = self.base_tree.find("packages")
+            if packages_el is None:
+                packages_el = ET.SubElement(self.base_tree, "packages")
+
             self._merge_sources(new_tree)
-            for new_class in new_tree.xpath("./packages//class"):
-                self._merge_class(new_class)
+            for new_package in new_tree.xpath("./packages/package"):
+                package_name = new_package.get("name")
+                if package_name not in self._package_map:
+                    packages_el.append(new_package)
+                    self._package_map[package_name] = new_package
+
+                for new_class in new_package.xpath("classes/class"):
+                    self._merge_class(new_class)
 
         self._recalculate_all_rates()
         self._update_timestamp()
