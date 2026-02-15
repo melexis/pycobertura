@@ -1,6 +1,7 @@
 import click
 
 from pycobertura.cobertura import Cobertura, CoberturaDiff
+from pycobertura.merger import CoberturaMerger
 from pycobertura.reporters import (
     GitHubAnnotationReporter,
     HtmlReporter,
@@ -156,6 +157,35 @@ def show(
 
     isatty = True if output is None else output.isatty()
     click.echo(report, file=output, nl=isatty)
+
+
+@pycobertura.command()
+@click.argument(
+    "cobertura_files",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+)
+@click.option(
+    "-o",
+    "--output",
+    metavar="<file>",
+    type=click.File("wb"),
+    help="Write merged report to <file> instead of stdout.",
+)
+def merge(cobertura_files, output):
+    """Merge multiple Cobertura reports into a single one."""
+    try:
+        merger = CoberturaMerger(list(cobertura_files))
+        merged_report = merger.merge()
+    except Exception as e:
+        click.echo(f"Error merging files: {e}", err=True)
+        raise SystemExit(ExitCodes.EXCEPTION)
+
+    if output:
+        output.write(merged_report)
+    else:
+        click.echo(merged_report)
 
 
 delta_reporters = {
